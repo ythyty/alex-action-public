@@ -281,7 +281,8 @@ jobs:
     #     path: openwrt/bin/targets/
 
     - name: Upload release asset
-      if: env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success'  && github.event == 'release'
+      #   && github.event == 'release'
+      if: env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success'
       uses: svenstaro/upload-release-action@v2
       with:
         repo_token: ${{ secrets.STANDARD }}
