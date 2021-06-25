@@ -178,11 +178,11 @@ jobs:
           echo "::set-output name=status::success"
           
           echo "=============="
-          echo "github.event=="github.event
+          echo "github.event=="${{ github.event }} 
 
 
       - name: Upload release
-        if: github.event == 'release'
+        # if: github.event == 'release'
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
