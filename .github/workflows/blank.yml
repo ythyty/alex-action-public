@@ -2,16 +2,29 @@
 
 name: CI
 
-# Controls when the workflow will run
+# Controls when the action will run. 
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  # Triggers the workflow on push or pull request events but only for the master branch
+  # push:
+  #   branches: [ master ]
+  # pull_request:
+  #   branches: [ master ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
+
+
+env:
+  # TIPS: 修改时需要注意:(冒号)后面有空格。
+  # 仓库地址
+  REPO_URL: https://github.com/ythyty/LEDE-x86_64
+
+  SCKEY: ${{ secrets.SCKEY }}
+  # SCKEY: SCU72628Tb5b885cc9520ebf3de4c3039b9fd21025e0420b298227
+
+
+  # 源码分支
+  REPO_BRANCH: master
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -27,10 +40,230 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          df -hT $PWD
+          ls
+          echo Hello, world aaaa2222!
+
+          docker rmi `docker images -q` > /dev/null 2>&1
+
+          mkdir -p /workdir
+
+          sudo chown $USER:$GROUPS /workdir
+
+          df -hT $PWD
+          ls
+
+          echo Hello, world aaaa222222!
+         
+
+      - name: 克隆源代码(Clone source code)
+        working-directory: /workdir
+        run: |
+          df -hT $PWD
+          git clone $REPO_URL -b $REPO_BRANCH openwrt
+          ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+          sudo chown $USER:$GROUPS /workdir
+
+          df -hT $PWD
+          ls
+          echo Hello, world bbbbb!
+
+      - name: (组织文件)Organize files
+        id: organize
+        run: |
+          df -hT $PWD 
+          ls
+          cd openwrt
+          df -hT $PWD 
+          ls
+
+          echo Hello, world 11111111!
+
+          
+
+
+          df -hT $PWD 
+          ls
+
+          echo Hello, world 22222222!
+
+
+          df -hT $PWD 
+          ls
+
+          echo Hello, world 22aaaaaa2!
+
+          # sudo  会产生目录权限问题
+          mkdir -p ./artifact/firmware
+          mkdir -p ./artifact/package
+          mkdir -p ./artifact/buildinfo
+
+          mkdir -p ./artifact/tmpfile
+
+          chmod -R 777 ./artifact
+
+          # sudo chown $USER:$GROUPS ./artifact
+
+
+
+          echo hello1 > ./artifact/tmpfile/world1.txt
+          echo hello2 > ./artifact/tmpfile/world2.txt
+          echo hello3 > ./artifact/tmpfile/world3.alex
+
+          cp -rf  ./artifact/tmpfile/world1.txt  ./artifact/tmpfile/world1_bak.txt
+
+          cp -rf $(find ./artifact/tmpfile/ -type f -name "*.txt") ./artifact/package/
+          cp -rf $(find ./artifact/tmpfile/ -type f -name "*.alex") ./artifact/firmware/
+
+
+          df -hT $PWD 
+          ls
+
+          # cp -p -rf $(find ./ -type f -name "*.txt") ./artifact/firmware/
+          # cp -rf $(find ./ -type f -name "*.txt") artifact/package/
+
+          # tar -cvf - artifact/package/* | gzip > artifact/firmware/firmware1.tar.gz
+
+          # tar -czf artifact/firmware/firmware1.tar.gz artifact/package/*
+          tar -zcvf artifact/firmware/firmware1.tar.gz artifact/package/*
+
+          echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+          echo "::set-output name=status::success"
+          
+          # cd openwrt/bin/targets
+          # echo targets1 > openwrt/bin/targets/targets1.txt
+          # echo targets2 > openwrt/bin/targets/targets2.txt
+          # echo targets3 > openwrt/bin/targets/targets3.txt
+          # tar -cvf - openwrt/bin/targets/ | gzip > openwrt/bin/targets/targetstest.tar.gz
+
+          # cd openwrt/bin/Firmware
+          # echo firmware1 > openwrt/bin/Firmware/firmware1.txt
+          # echo firmware2 > openwrt/bin/Firmware/firmware2.txt
+          # echo firmware3 > openwrt/bin/Firmware/firmware3.txt
+          # tar -cvf - openwrt/bin/Firmware/ | gzip > openwrt/bin/Firmware/targetstest.tar.gz
+
+          # echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+          # echo "::set-output name=status::success"
+
+
+          # mkdir -p ./artifact/firmware
+          # mkdir -p ./artifact/package
+          # mkdir -p ./artifact/buildinfo
+          # rm -rf $(find openwrt/bin/targets/ -type d -name "packages")
+          # cp -rf $(find openwrt/bin/targets/ -type f) ./artifact/firmware/
+          # cp -rf $(find openwrt/bin/packages/ -type f -name "*.ipk") ./artifact/package/
+          # cp -rf $(find openwrt/bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/buildinfo/
+
+          # tar -cvf - ./artifact/firmware | gzip > ./artifact/firmware/firmware1.tar.gz
+          # tar -cvf - ./artifact/package | gzip > ./artifact/package/package1.tar.gz
+          # tar -cvf - ./artifact/buildinfo | gzip > ./artifact/buildinfo/buildinfo1.tar.gz
+
+          # tar -cvf - openwrt/bin/targets | gzip > targets2.tar.gz
+          # rm -rf openwrt/bin/targets
+          # tar -cvf - openwrt/bin | gzip > bin2.tar.gz
+          # rm -rf openwrt/bin
+          # echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+          # echo "::set-output name=status::success"
+
+
+      - name: Generate release tag
+        id: compile
+        run: |
+          echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
+          touch release.txt
+          echo "::set-output name=status::success"
+
+
+      - name: Upload release
+        # if: github.event == 'release'
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: openwrt/artifact/firmware/*
+          # tag: tttestaaa
+          # tag: ${{ github.ref }}
+          tag: ${{ steps.compile.outputs.release_tag }}
+          overwrite: true
+          file_glob: true
+
+
+      - name: (微信通知)WeChat notification
+        continue-on-error: true
+        if: env.SCKEY
+        run: |
+          echo ${{steps.compile.outputs.status}}
+          # [ steps.compile.outputs.status == "success" ] && curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=🎉固件编译完成_${{ steps.compile.outputs.release_tag }}😋 || curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=❌固件编译失败_${{ steps.compile.outputs.release_tag }}😂
+
+          if [ steps.compile.outputs.status == "success" ]
+          then
+            curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=🎉固件编译完成_${{ steps.compile.outputs.release_tag }}😋
+          else
+            curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=❌固件编译失败_${{ steps.compile.outputs.release_tag }}😂
+          fi
+
+
+
+
+      # - name: Release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     files: |
+      #       Release.txt
+      #       LICENSE
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+
+      # - name: (上载固件发布)Upload firmware to release
+      #   uses: softprops/action-gh-release@v1
+      #   # if: steps.tag.outputs.status == 'success' && !cancelled()
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     # tag_name: ${{ steps.tag.outputs.release_tag }}
+      #     tag_name: tttttestt
+      #     # body_path: release.txt
+      #     # files: ${{ env.FIRMWARE }}
+      #     files: |
+      #         openwrt/artifact/buildinfo/firmware1.tar.gz
+
+
+      # - name: 上传bin文件夹(固件+ipk)在 github actions
+      #   uses: actions/upload-artifact@v2
+      #   # if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      #   with:
+      #     name: filename+ipk_${{ env.CODE }}_${{ env.TARGET_PROFILE }}_${{ env.Compile_Date }}
+      #     path: openwrt/artifact/firmware
+
+
+      # - name: (生成发布标签)Generate release tag
+      #   id: tag
+      #   # if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      #   run: |
+      #     echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
+      #     echo "::set-output name=status::success"
+      
+      # - name: (上载固件发布)Upload firmware to release
+      #   uses: softprops/action-gh-release@v1
+      #   # if: steps.tag.outputs.status == 'success' && !cancelled()
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     tag_name: ${{ steps.tag.outputs.release_tag }}
+      #     # body_path: world.txt
+      #     # files: ${{ env.FIRMWARE }}/*
+      #     files: openwrt/artifact/package*
+
+
+      # - name: Upload release asset
+      #   # if: github.event == 'release'
+      #   uses: svenstaro/upload-release-action@v2
+      #   with:
+      #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+      #     file: openwrt/artifact/firmware/*
+      #     tag: tttestaaa
+      #     file_glob: true
