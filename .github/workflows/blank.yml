@@ -178,7 +178,7 @@ jobs:
           echo "::set-output name=status::success"
           
           echo "=============="
-          echo "github.event"
+          echo "github.event=="github.event
 
 
       - name: Upload release
