@@ -178,7 +178,7 @@ jobs:
           echo "::set-output name=status::success"
           
           echo "=============="
-          echo "github.event=="${{ github.event }} 
+          # echo "github.event=="${{ github.event }} 
 
 
       - name: Upload release
@@ -201,12 +201,12 @@ jobs:
           echo ${{steps.compile.outputs.status}}
           # [ steps.compile.outputs.status == "success" ] && curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=🎉固件编译完成_${{ steps.compile.outputs.release_tag }}😋 || curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=❌固件编译失败_${{ steps.compile.outputs.release_tag }}😂
 
-          if [ steps.compile.outputs.status == "success" ]
-          then
-            curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=🎉固件编译完成_${{ steps.compile.outputs.release_tag }}😋
-          else
-            curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=❌固件编译失败_${{ steps.compile.outputs.release_tag }}😂
-          fi
+          # if [ steps.compile.outputs.status == "success" ]
+          # then
+          # curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=🎉固件编译完成_${{ steps.compile.outputs.release_tag }}😋
+          # else
+          #   curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=❌固件编译失败_${{ steps.compile.outputs.release_tag }}😂
+          # fi
 
 
 
