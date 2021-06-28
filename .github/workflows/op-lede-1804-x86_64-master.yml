@@ -237,7 +237,7 @@ jobs:
 
         # rm -rf $(find ./bin/targets/ -type d -name "packages")
 
-        # cp -rf $(find ./bin/targets/ -type f) ./artifact/firmware/
+        cp -rf $(find ./bin/targets/ -type f -name "*.bin" -o -name "*.img" -o -name "*.vmdk") ./artifact/firmware/
         cp -rf $(find ./bin/packages/ -type f -name "*.ipk") ./artifact/package_tmp/
         cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/buildinfo/
 
@@ -249,6 +249,8 @@ jobs:
         cp ./artifact/package/* ./artifact/release_action/
         # cp -rf $(find ./bin/targets/ -type f) ./artifact/release_action/
         cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/release_action/
+
+        cp -rf $(find ./bin/targets/ -type f -name "*.bin" -o -name "*.img" -o -name "*.vmdk") ./artifact/release_action/
 
         # 清理目录
         sudo rm -rf ./artifact/package_tmp
