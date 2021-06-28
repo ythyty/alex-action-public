@@ -237,20 +237,30 @@ jobs:
 
         # rm -rf $(find ./bin/targets/ -type d -name "packages")
 
-        cp -rf $(find ./bin/targets/ -type f -name "*.bin" -o -name "*.img" -o -name "*.vmdk") ./artifact/firmware/
-        cp -rf $(find ./bin/packages/ -type f -name "*.ipk") ./artifact/package_tmp/
-        cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/buildinfo/
+        # cp -rf $(find ./bin/targets/ -type f -name "*.bin" -o -name "*.img" -o -name "*.vmdk") ./artifact/firmware/
+        # cp -rf $(find ./bin/packages/ -type f -name "*.ipk") ./artifact/package_tmp/
+        # cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/buildinfo/
 
-        tar -zcvf ./artifact/package/package.tar.gz ./artifact/package_tmp/*
+        # tar -zcvf ./artifact/package/package.tar.gz ./artifact/package_tmp/*
        
         # 特殊处理需要发布的文件
 
-        # cp -rf $(find ./bin/targets/ -type f) ./artifact/release_action/
-        cp ./artifact/package/* ./artifact/release_action/
-        # cp -rf $(find ./bin/targets/ -type f) ./artifact/release_action/
-        cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/release_action/
+        # # cp -rf $(find ./bin/targets/ -type f) ./artifact/release_action/
+        # cp ./artifact/package/* ./artifact/release_action/
+        # # cp -rf $(find ./bin/targets/ -type f) ./artifact/release_action/
+        # cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/release_action/
+
+        # cp -rf $(find ./bin/targets/ -type f -name "*.bin" -o -name "*.img" -o -name "*.vmdk") ./artifact/release_action/
+
+
+
+        # ------------------------
 
         cp -rf $(find ./bin/targets/ -type f -name "*.bin" -o -name "*.img" -o -name "*.vmdk") ./artifact/release_action/
+        cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest" -o -name "sha256sums") ./artifact/release_action/
+
+        cp -rf $(find ./bin/packages/ -type f -name "*.ipk") ./artifact/package_tmp/
+        tar -zcvf ./artifact/release_action/package.tar.gz ./artifact/package_tmp/*
 
         # 清理目录
         sudo rm -rf ./artifact/package_tmp
