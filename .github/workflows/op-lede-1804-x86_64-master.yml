@@ -309,16 +309,30 @@ jobs:
     #     path: openwrt/bin/targets/
     
 
-    - name: Upload release asset
-      #   && github.event == 'release'
-      if: env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success'
-      uses: svenstaro/upload-release-action@v2
+    # - name: Upload release asset
+    #   #   && github.event == 'release'
+    #   if: env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success'
+    #   uses: svenstaro/upload-release-action@v2
+    #   with:
+    #     # repo_token: ${{ secrets.STANDARD }}
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     file: openwrt/artifact/release_action/*
+    #     tag: ${{ github.ref }}
+    #     file_glob: true
+
+
+    - name: (上载固件发布)Upload firmware to release
+      uses: softprops/action-gh-release@v1
+      # if: steps.tag.outputs.status == 'success' && !cancelled()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        # repo_token: ${{ secrets.STANDARD }}
-        repo_token: ${{ secrets.GITHUB_TOKEN }}
-        file: openwrt/artifact/release_action/*
-        tag: ${{ github.ref }}
-        file_glob: true
+        tag_name: ${{ steps.tag.outputs.release_tag }}
+        # body_path: world.txt
+        # files: ${{ env.FIRMWARE }}/*
+        files: openwrt/artifact/release_action/*
+
+
 
     - name: (微信通知)WeChat notification
       continue-on-error: true
