@@ -258,35 +258,30 @@ jobs:
 
         cp -rf $(find ./bin/targets/ -type f -name "*.bin" -o -name "*.img" -o -name "*.vmdk") ./artifact/release_action/
 
-        cd ./artifact/release_action
+        # cd ./artifact/release_action
        
-        df -hT $PWD
-        ls
-        cd ../../
-        df -hT $PWD
+        # df -hT $PWD
+        # ls
+        # cd ../../
+        # df -hT $PWD
 
         cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest" -o -name "sha256sums") ./artifact/release_action/
 
-        cd ./artifact/release_action
+        # cd ./artifact/release_action
         
-        df -hT $PWD
-        ls
-        cd ../../
-        df -hT $PWD
+        # df -hT $PWD
+        # ls
+        # cd ../../
+        # df -hT $PWD
 
         cp -rf $(find ./bin/packages/ -type f -name "*.ipk") ./artifact/package_tmp/
         tar -zcvf ./artifact/release_action/package.tar.gz ./artifact/package_tmp/*
-
-        df -hT $PWD
-        ls
-        cd ../../
-        df -hT $PWD
-
-
+       
         # # 清理目录
-        # sudo rm -rf ./artifact/package_tmp
+        sudo rm -rf ./artifact/package_tmp/*
 
-
+        # df -hT $PWD
+        # ls
 
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "::set-output name=status::success"
