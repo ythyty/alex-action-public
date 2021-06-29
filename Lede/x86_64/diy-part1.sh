@@ -25,4 +25,4 @@ git clone https://github.com/garypang13/luci-app-eqos.git package/lean/luci-app-
 #git clone https://github.com/jerrykuku/node-request.git package/lean/node-request  #京东签到依赖
 #git clone https://github.com/jerrykuku/luci-app-jd-dailybonus.git package/lean/luci-app-jd-dailybonus  #京东签到
 
-git clone https://github.com/destan19/OpenAppFilter.git package/lean/luci-oaf-app  # 应用过滤的OpenWrt固件
+git clone https://github.com/destan19/OpenAppFilter.git package/lean/luci-oaf-app  # 应用过滤插件

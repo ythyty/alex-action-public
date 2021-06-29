@@ -181,7 +181,9 @@ jobs:
       run: |
         cd openwrt
         echo -e "$(nproc) thread compile"
-        make -j$(nproc) || make -j1 || make -j1 V=s
+        # make -j$(nproc) || make -j1 || make -j1 V=s
+        # 应用过滤插件专用
+        make V=99 
 
         # rm -rf package/litte/microsocks && rm -rf package/litte/redsocks2 && rm -rf package/litte/tcpping
         # cp -f package/litte/commit/default-settings package/lean/default-settings/files/zzz-default-settings
