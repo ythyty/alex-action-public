@@ -1,0 +1,450 @@
+#
+# Copyright (c) 2019-2020 P3TERX <https://p3terx.com>
+#
+# This is free software, licensed under the MIT License.
+# See /LICENSE for more information.
+#
+# https://github.com/P3TERX/Actions-OpenWrt
+# https://p3terx.com/archives/build-openwrt-with-github-actions.html
+# Description: Build OpenWrt using GitHub Actions
+# 
+#
+
+name: op-lede-1804-xiaomi_mi-ac2100-master
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+#     inputs:
+#       ssh:
+#         description: 'SSH connection to Actions'
+#         required: true
+#         default: 'false'
+
+
+
+# # Release 发布触发
+#   release:
+#     types: [published]
+    
+# 编辑触发    
+  # push:
+  #   branches: 
+  #     - master
+      
+# 定时触发      
+#  schedule:
+#    - cron: 0 */48 * * *
+
+#  schedule:
+#    - cron: 0 8 * * 5
+
+# 点赞触发  
+#  watch:
+#    types: started
+
+
+# 点击 star 开始编译
+#  watch:
+#    types: started
+
+
+env:
+  # TIPS: 修改时需要注意:(冒号)后面有空格。
+  # 源码仓库地址
+  REPO_URL: https://github.com/coolsnowwolf/lede
+
+  # 源码分支
+  REPO_BRANCH: master
+  # 自定义feeds.conf.default文件名
+  FEEDS_CONF: feeds.conf.default
+  # 自定义.config文件名
+  CONFIG_FILE: Lede/mt7621/.config
+  # 自定义diy-part1.sh文件名
+  DIY_P1_SH: Lede/mt7621/diy-part1.sh
+  # 自定义diy-part2.sh文件名
+  DIY_P2_SH: Lede/mt7621/diy-part2.sh
+  # 
+  UPLOAD_CONFIG: true
+  # 上传 bin 目录。即包含所有 ipk 文件和固件的目录。默认false
+  UPLOAD_BIN_DIR: true
+  # 上传固件目录。默认true
+  UPLOAD_FIRMWARE: true
+  # 上传固件到奶牛快传。默认false
+  UPLOAD_COWTRANSFER: false
+  # 上传固件到 WeTransfer 。默认false
+  UPLOAD_WETRANSFER: false
+  # 上传固件到 releases 。默认false
+  UPLOAD_RELEASE: true
+
+  REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
+  SCKEY: ${{ secrets.SCKEY }}
+  # SCKEY: SCU72628Tb5b885cc9520ebf3de4c3039b9fd21025e0420b298227
+  TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+
+  Github: https://github.com/${{github.repository}}
+  Author: ${{github.actor}}
+  Apidz: ${{github.repository}}
+  Run_number: ${{github.run_number}}
+  Run_workflow: ${{github.workflow}}
+
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    name: 编译 op-lede-1804-xiaomi_mi-ac2100
+
+    if: github.event.repository.owner.id == github.event.sender.id
+
+    steps:
+    - name: 检查(Checkout)
+      uses: actions/checkout@main
+
+    - name: 初始化环境(Initialization environment)
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        docker rmi `docker images -q` > /dev/null 2>&1
+        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        sudo -E apt-get -qq update
+        
+        # ===================
+        # sudo -E apt-get -qq install $(curl -fsSL git.io/depends-ubuntu-1804)
+        sudo -E apt-get -qq install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs gcc-multilib g++-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler antlr3 gperf wget swig rsync
+        # ===================
+
+        sudo -E apt-get -qq autoremove --purge
+        sudo -E apt-get -qq clean
+        sudo timedatectl set-timezone "$TZ"
+        sudo mkdir -p /workdir
+        sudo chown $USER:$GROUPS /workdir
+    
+    - name: 克隆源代码(Clone source code)
+      working-directory: /workdir
+      run: |
+        df -hT $PWD
+        git clone $REPO_URL -b $REPO_BRANCH openwrt
+        # sudo mkdir -p /workdir
+        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+
+    - name: Load custom feeds
+      run: |
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        chmod +x $DIY_P1_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P1_SH
+    
+    - name: 更新 feeds(Update feeds)
+      run: cd openwrt  && ./scripts/feeds update -a
+
+    - name: 安装 feeds(Install feeds)
+      run: cd openwrt && ./scripts/feeds install -a
+
+
+    - name: 自定义安装源
+    #  working-directory: ./openwrt
+      run: |
+        cd openwrt
+        git clone https://github.com/kenzok8/litte package/litte
+        git clone https://github.com/xiaorouji/openwrt-passwall package/passwall
+
+    
+    - name: 自定义配置文件(Load custom configuration)
+      run: |
+        [ -e files ] && mv files openwrt/files
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        chmod +x $DIY_P2_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P2_SH
+    
+    # - name: SSH connection to Actions
+    #   uses: P3TERX/ssh2actions@v1.0.0
+    #   if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+    #   env:
+    #     TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    #     TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+    - name: 下载包文件(Download package)
+      id: package
+      run: |
+        cd openwrt
+        make defconfig
+        make download -j8
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
+    
+    - name: 编译固件(Compile the firmware)
+      id: compile
+      run: |
+        cd openwrt
+        echo -e "$(nproc) thread compile"
+        # make -j$(nproc) || make -j1 || make -j1 V=s
+        # 应用过滤插件专用
+        make V=99 
+
+        # rm -rf package/litte/microsocks && rm -rf package/litte/redsocks2 && rm -rf package/litte/tcpping
+        # cp -f package/litte/commit/default-settings package/lean/default-settings/files/zzz-default-settings
+        # cp -f package/litte/commit/banner package/base-files/files/etc/banner
+        # cp -f package/litte/commit/Leandiffconfig .config && make defconfig
+        
+        # git pull && ./scripts/feeds update -a
+        # ./scripts/feeds install -a
+
+        echo "======================="
+        echo "Space usage:"
+        echo "======================="
+        df -h
+        echo "======================="
+        # du -h ./ --max-depth=1
+        # du -h /mnt/openwrt/ --max-depth=1
+
+        echo "::set-output name=status::success"
+        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
+        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+    
+    - name: 检查空间使用情况(Check space usage)
+      if: (!cancelled())
+      run: df -hT
+
+    # ================================================================================
+    # alex use  只传到release 空间
+    
+    - name: (生成发布标签)Generate release tag
+      id: tag
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      run: |
+        cd openwrt
+        echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
+        echo "::set-output name=status::success"
+
+    - name: (组织文件)Organize files
+      id: organize
+      if: env.UPLOAD_RELEASE == 'true' && steps.compile.outputs.status == 'success' && !cancelled()
+      run: |
+        cd openwrt
+        mkdir -p ./artifact/firmware
+        mkdir -p ./artifact/package
+        mkdir -p ./artifact/package_tmp
+        mkdir -p ./artifact/buildinfo
+
+        # 需要发布的文件
+        mkdir -p ./artifact/release_action
+
+        df -hT $PWD
+        ls
+
+        # rm -rf $(find ./bin/targets/ -type d -name "packages")
+
+        # cp -rf $(find ./bin/targets/ -type f -name "*.bin" -o -name "*.img" -o -name "*.vmdk") ./artifact/firmware/
+        # cp -rf $(find ./bin/packages/ -type f -name "*.ipk") ./artifact/package_tmp/
+        # cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/buildinfo/
+
+        # tar -zcvf ./artifact/package/package.tar.gz ./artifact/package_tmp/*
+       
+        # 特殊处理需要发布的文件
+
+        # # cp -rf $(find ./bin/targets/ -type f) ./artifact/release_action/
+        # cp ./artifact/package/* ./artifact/release_action/
+        # # cp -rf $(find ./bin/targets/ -type f) ./artifact/release_action/
+        # cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest") ./artifact/release_action/
+
+        # cp -rf $(find ./bin/targets/ -type f -name "*.bin" -o -name "*.img" -o -name "*.vmdk") ./artifact/release_action/
+
+
+
+        # ------------------------
+
+        cp -rf $(find ./bin/targets/ -type f -name "*.bin" -o -name "*.img" -o -name "*.vmdk") ./artifact/release_action/
+
+        # cd ./artifact/release_action
+       
+        # df -hT $PWD
+        # ls
+        # cd ../../
+        # df -hT $PWD
+
+        cp -rf $(find ./bin/targets/ -type f -name "*.buildinfo" -o -name "*.manifest" -o -name "sha256sums") ./artifact/release_action/
+
+        # cd ./artifact/release_action
+        
+        # df -hT $PWD
+        # ls
+        # cd ../../
+        # df -hT $PWD
+
+        cp -rf $(find ./bin/packages/ -type f -name "*.ipk") ./artifact/package_tmp/
+        tar -zcvf ./artifact/release_action/package.tar.gz ./artifact/package_tmp/*
+       
+        # # 清理目录
+        sudo rm -rf ./artifact/package_tmp/*
+
+        # df -hT $PWD
+        # ls
+
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        echo "::set-output name=status::success"
+
+            
+    # - name: (上传 buildinfo)Deliver buildinfo
+    #   if: env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success' && !cancelled()
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: OpenWrt_buildinfo
+    #     path: openwrt/artifact/buildinfo/
+
+    # - name: (上传 package)Deliver package
+    #   if: env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success'  && !cancelled()
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: OpenWrt_package
+    #     path: openwrt/artifact/package/
+
+    # - name: (上传 firmware)Deliver firmware
+    #   if: env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success'  && !cancelled()
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: OpenWrt_firmware
+    #     path: openwrt/bin/targets/
+    
+
+    # - name: Upload release asset
+    #   #   && github.event == 'release'
+    #   if: env.UPLOAD_RELEASE == 'true' && steps.organize.outputs.status == 'success'
+    #   uses: svenstaro/upload-release-action@v2
+    #   with:
+    #     # repo_token: ${{ secrets.STANDARD }}
+    #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+    #     file: openwrt/artifact/release_action/*
+    #     tag: ${{ github.ref }}
+    #     file_glob: true
+
+
+    - name: (上载固件发布)Upload firmware to release
+      uses: softprops/action-gh-release@v1
+      # if: steps.tag.outputs.status == 'success' && !cancelled()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.tag.outputs.release_tag }}
+        # body_path: world.txt
+        # files: ${{ env.FIRMWARE }}/*
+        files: openwrt/artifact/release_action/*
+
+
+
+    - name: (微信通知)WeChat notification
+      continue-on-error: true
+      if: env.SCKEY
+      run: |
+        # [ steps.compile.outputs.status == 'success' ] && curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=🎉固件编译完成😋|| curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=❌固件编译失败😂
+
+        curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=🎉固件编译完成_${{ github.ref }}😋
+    # ================================================================================
+
+
+    # - name: 上传固件(Upload bin directory)
+    #   uses: actions/upload-artifact@main
+    # - run: echo hello > openwrt/bin/world.txt
+    #   if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+    #   with:
+    #     name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+    #     path: openwrt/bin
+
+    # - name: (组织文件)Organize files
+    #   id: organize
+    #   if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+    #   run: |
+    #     cd openwrt/bin/targets/*/*
+    #     rm -rf packages
+    #     echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+    #     echo "::set-output name=status::success"
+    
+    # - name: (上载固件目录)Upload firmware directory
+    #   uses: actions/upload-artifact@main
+    #   if: steps.organize.outputs.status == 'success' && !cancelled()
+    #   with:
+    #     name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+    #     path: ${{ env.FIRMWARE }}
+    
+    
+    # - name: 上传.config配置文件在github空间
+    #   uses: actions/upload-artifact@main
+    #   if: steps.organizer.outputs.status == 'success' && env.UPLOAD_CONFIG == 'true'
+    #   with:
+    #     name: .config-${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+    #     path: ./config
+    
+    # - name: (将固件上载到奶牛快传)Upload firmware to cowtransfer
+    #   id: cowtransfer
+    #   if: steps.organize.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
+    #   run: |
+    #     curl -fsSL git.io/file-transfer | sh
+    #     ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
+    #     echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
+    #     echo "::set-output name=url::$(cat cowtransfer.log | grep https | cut -f3 -d" ")"
+    
+    # - name: (将固件上载到WeTransfer)Upload firmware to WeTransfer
+    #   id: wetransfer
+    #   if: steps.organize.outputs.status == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
+    #   run: |
+    #     curl -fsSL git.io/file-transfer | sh
+    #     ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
+    #     echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
+    #     echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
+    
+    # - name: (生成发布标签)Generate release tag
+    #   id: tag
+    #   if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+    #   run: |
+    #     echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")"
+    #     touch release.txt
+    #     [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
+    #     [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
+    #     echo "::set-output name=status::success"
+    
+    # - name: (上载固件发布)Upload firmware to release
+    #   uses: softprops/action-gh-release@v1
+    #   if: steps.tag.outputs.status == 'success' && !cancelled()
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #   with:
+    #     tag_name: ${{ steps.tag.outputs.release_tag }}
+    #     body_path: release.txt
+    #     files: ${{ env.FIRMWARE }}
+
+
+ 
+
+
+    # - name: WeChat notification
+    #   continue-on-error: true
+    #   if: env.SCKEY
+    #   run: |
+    #     [ steps.compile.outputs.status == 'successfully' ] && curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=🎉固件_${{matrix.target}}编译完成😋|| curl https://sc.ftqq.com/${{ secrets.SCKEY }}.send?text=❌固件_${{matrix.target}}编译失败😂
+
+    # - name: Telegram notification
+    #   if: env.TELEGRAM_TOKEN && ! contains(github.event.action, 'notg')
+    #   continue-on-error: true
+    #   run: |
+    #     # [ steps.compile.outputs.status == 'successfully' ] && curl -k --data chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" --data "text=🎉 固件 ${{matrix.target}} 编译成功 😋" "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage" || curl -k --data chat_id="${{ secrets.TELEGRAM_TO }}" --data "text=❌ 固件 ${{matrix.target}} 编译失败 😂" "https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage"
+
+
+
+    # - name: (删除工作流运行)Delete workflow runs
+    #   uses: GitRML/delete-workflow-runs@main
+    #   with:
+    #     retain_days: 1
+    #     keep_minimum_runs: 10
+
+    # - name: (删除旧版本)Remove old Releases
+    #   uses: dev-drprasad/delete-older-releases@v0.1.0
+    #   if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+    #   with:
+    #     keep_latest: 5
+    #     delete_tags: true
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
